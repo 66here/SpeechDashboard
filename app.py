@@ -16,7 +16,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -25,7 +24,20 @@ import app_utils as U
 warnings.filterwarnings("ignore")  # peringatan versi internal tidak perlu ditampilkan ke pengguna
 
 HERE = Path(__file__).resolve().parent
-ASSETS, SRC, MODEL_DIR = HERE / "assets", HERE / "src", HERE / "model"
+
+
+def _dir(name: str) -> Path:
+    """Folder proyek (assets/, model/, src/); jika repo diunggah datar tanpa folder, pakai folder aplikasi."""
+    return HERE / name if (HERE / name).is_dir() else HERE
+
+
+ASSETS, SRC, MODEL_DIR = _dir("assets"), _dir("src"), _dir("model")
+SAMPLES = ASSETS / "samples" if (ASSETS / "samples").is_dir() else ASSETS
+
+
+def list_samples() -> list:
+    return sorted(p for p in SAMPLES.glob("*.wav") if p.stem in U.ORDER)
+
 
 st.set_page_config(page_title="Suara & Emosi", page_icon="🎙️", layout="wide", initial_sidebar_state="expanded")
 
@@ -649,9 +661,9 @@ def page_prediction(D) -> None:
         else:
             st.info("Versi Streamlit ini belum mendukung perekaman langsung. Perbarui Streamlit (≥ 1.40) atau gunakan unggah file.")
     else:
-        samples = sorted((ASSETS / "samples").glob("*.wav")) if (ASSETS / "samples").exists() else []
+        samples = list_samples()
         if not samples:
-            st.info("Folder `assets/samples/` tidak tersedia.")
+            st.info("File contoh audio (neutral.wav, happy.wav, dst.) tidak tersedia.")
         else:
             names = [s.stem for s in samples]
             ch = st.selectbox("Pilih contoh (aktor 01, intensitas normal)", names, format_func=lambda s: U.emo_label(s), key="sample_pick")
@@ -902,7 +914,7 @@ def page_dataset(D) -> None:
     st.markdown("")
     st.markdown("Rekaman dilakukan dalam **kondisi studio**. Setiap aktor mengucapkan kalimat yang sama, *“Kualitas HP ini cukup bagus”*, dengan 5 emosi × 2 intensitas × 3 pengulangan = 30 rekaman per aktor.")
     insight("Karena kalimatnya selalu sama, model terutama mempelajari **karakteristik intonasi dan ekspresi vokal**, bukan memahami makna kalimat yang berbeda-beda.")
-    samples = sorted((ASSETS / "samples").glob("*.wav")) if (ASSETS / "samples").exists() else []
+    samples = list_samples()
     if samples:
         with st.expander("🎧 Contoh audio (aktor 01, intensitas normal)", expanded=False):
             cc = st.columns(len(samples))
